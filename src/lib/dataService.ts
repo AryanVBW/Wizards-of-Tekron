@@ -309,8 +309,10 @@ class DataService {
       const userIndex = this.users.findIndex(u => u.id === userId);
       if (userIndex === -1) return false;
 
+      const user = this.users[userIndex];
+
       // Don't allow deleting the last admin
-      const isAdmin = this.users[userIndex].role === 'admin';
+      const isAdmin = user.role === 'admin';
       if (isAdmin) {
         const adminCount = this.users.filter(u => u.role === 'admin').length;
         if (adminCount <= 1) {
@@ -323,13 +325,14 @@ class DataService {
       this.users.splice(userIndex, 1);
       
       // Also remove associated team profile if exists
-      const teamIndex = this.teams.findIndex(t => t.user_id === userId);
+      const teamIndex = this.teams.findIndex(t => t.leader_email === user.email);
       if (teamIndex !== -1) {
         this.teams.splice(teamIndex, 1);
       }
 
-      // Save changes
-      this.saveData();
+      // Save changes to localStorage
+      localStorage.setItem(this.USERS_KEY, JSON.stringify(this.users));
+      localStorage.setItem(this.TEAMS_KEY, JSON.stringify(this.teams));
       return true;
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -337,17 +340,17 @@ class DataService {
     }
   }
 
-  createUserAsAdmin(userData: { email: string; password: string; role: 'admin' | 'team' }): User | null {
+  createUserAsAdmin(userData: { email: string; password: string; role: 'admin' | 'team_leader' }): User | null {
     if (!this.isAdmin()) return null;
 
     const newUser = this.createUser(userData);
     
-    if (userData.role === 'team') {
+    if (userData.role === 'team_leader') {
       // Create associated team profile
       this.createTeam({
-        user_id: newUser.id,
-        current_level: 1,
-        total_points: 0
+        name: `Team ${newUser.email.split('@')[0]}`,
+        leader_email: newUser.email,
+        created_at: new Date().toISOString()
       });
     }
 
@@ -364,7 +367,9 @@ class DataService {
 
   // Modified team methods
   getTeamByUserId(userId: string): TeamProfile | null {
-    return this.teams.find(team => team.user_id === userId) || null;
+    const user = this.users.find(u => u.id === userId);
+    if (!user) return null;
+    return this.teams.find(team => team.leader_email === user.email) || null;
   }
 
   getTeamQuestions(userId: string): Question[] {

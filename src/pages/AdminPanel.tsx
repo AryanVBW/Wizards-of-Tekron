@@ -6,13 +6,23 @@ import { Users, UserPlus, Key, Shield } from 'lucide-react';
 interface User {
   id: string;
   email: string;
-  role: 'admin' | 'team';
+  role: 'admin' | 'team_leader';
+  created_at: string;
+}
+
+interface Team {
+  id: string;
+  name: string;
+  leader_email: string;
+  current_level: number;
+  total_points: number;
   created_at: string;
 }
 
 export function AdminPanel() {
   const [users, setUsers] = useState<User[]>([]);
-  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'team' as const });
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [newUser, setNewUser] = useState({ email: '', password: '', role: 'team_leader' as const });
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -20,16 +30,18 @@ export function AdminPanel() {
       const isAdminUser = dataService.isAdmin();
       setIsAdmin(isAdminUser);
       if (isAdminUser) {
-        loadUsers();
+        loadData();
       }
     };
 
     checkAdmin();
   }, []);
 
-  const loadUsers = () => {
-    const allUsers = dataService.getAllUsers();
+  const loadData = () => {
+    const allUsers = dataService.getUsers();
+    const allTeams = dataService.getTeams();
     setUsers(allUsers);
+    setTeams(allTeams);
   };
 
   const handleCreateUser = (e: React.FormEvent) => {
@@ -82,8 +94,8 @@ export function AdminPanel() {
               const user = dataService.createUserAsAdmin(newUser);
               if (user) {
                 toast.success('User created successfully');
-                setNewUser({ email: '', password: '', role: 'team' });
-                loadUsers();
+                setNewUser({ email: '', password: '', role: 'team_leader' });
+                loadData();
               } else {
                 toast.error('Failed to create user');
               }
@@ -121,7 +133,7 @@ export function AdminPanel() {
                 onChange={(e) => setNewUser({ ...newUser, role: e.target.value as 'admin' | 'team' })}
                 className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
               >
-                <option value="team">Team</option>
+                <option value="team_leader">Team Leader</option>
                 <option value="admin">Admin</option>
               </select>
             </div>
@@ -165,7 +177,7 @@ export function AdminPanel() {
                           const success = dataService.deleteUser(user.id);
                           if (success) {
                             toast.success('User deleted successfully');
-                            loadUsers();
+                            loadData();
                           } else {
                             toast.error('Failed to delete user');
                           }
@@ -183,6 +195,34 @@ export function AdminPanel() {
                       </svg>
                     </button>
                   )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Team List */}
+        <div className="mt-12">
+          <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
+            <Users className="w-5 h-5 text-purple-400" />
+            Teams
+          </h3>
+          
+          <div className="space-y-4">
+            {teams.map(team => (
+              <div
+                key={team.id}
+                className="flex items-center justify-between p-4 bg-black/20 rounded-lg border border-white/10"
+              >
+                <div>
+                  <p className="font-medium text-white">{team.name}</p>
+                  <p className="text-sm text-gray-400">Leader: {team.leader_email}</p>
+                  <p className="text-sm text-gray-400">Level: {team.current_level} | Points: {team.total_points}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-500">
+                    Created: {new Date(team.created_at).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             ))}

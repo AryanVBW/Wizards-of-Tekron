@@ -3,7 +3,7 @@ import { dataService } from '../lib/dataService';
 
 interface TeamRanking {
   id: string;
-  team_name: string;
+  name: string;
   total_points: number;
   current_level: number;
 }
@@ -39,7 +39,7 @@ export function LeaderboardPage() {
               <div className="flex items-center gap-6">
                 <span className="text-2xl font-bold text-purple-400">#{index + 1}</span>
                 <div>
-                  <h3 className="text-xl font-semibold text-white">{team.team_name}</h3>
+                  <h3 className="text-xl font-semibold text-white">{team.name}</h3>
                   <p className="text-gray-400">Level {team.current_level}</p>
                 </div>
               </div>

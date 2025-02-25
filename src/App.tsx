@@ -175,7 +175,7 @@ function App() {
           <Navigation isAdmin={isAdmin} activeSection={activeSection} setActiveSection={setActiveSection} />
           {activeSection === 'dashboard' && <Dashboard isAdmin={isAdmin} />}
           {activeSection === 'leaderboard' && <LeaderboardPage />}
-        {activeSection === 'admin' && <AdminPanel />}
+          {activeSection === 'admin' && <AdminPanel />}
           {activeSection === 'questions' && <QuestionsPage />}
         </div>
       )}

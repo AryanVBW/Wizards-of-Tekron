@@ -7,12 +7,21 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
+interface User {
+  id: string;
+  email: string;
+  role: 'admin' | 'team_leader';
+  created_at: string;
+}
+
 interface TeamProfile {
   id: string;
-  team_name: string;
-  status: 'active' | 'disqualified' | 'spam';
+  name: string;
+  leader_email: string;
+  status?: 'active' | 'disqualified' | 'spam';
   current_level: number;
   total_points: number;
+  created_at: string;
 }
 
 interface TeamSubmission {
@@ -34,6 +43,7 @@ interface LevelKey {
 
 export function AdminPanel() {
   const [teams, setTeams] = useState<TeamProfile[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [submissions, setSubmissions] = useState<TeamSubmission[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [penaltyPoints, setPenaltyPoints] = useState<number>(0);
@@ -46,9 +56,15 @@ export function AdminPanel() {
 
   useEffect(() => {
     loadTeams();
+    loadUsers();
     loadSubmissions();
     loadLevelKeys();
   }, []);
+
+  const loadUsers = () => {
+    const users = dataService.getUsers();
+    setUsers(users);
+  };
 
   async function loadTeams() {
     try {
@@ -274,7 +290,7 @@ export function AdminPanel() {
             <div key={team.id} className="bg-white/5 p-4 rounded-xl">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="font-semibold text-white">{team.team_name}</h4>
+                  <h4 className="font-semibold text-white">{team.name}</h4>
                   <p className="text-sm text-gray-400">
                     Level {team.current_level} • {team.total_points} Points
                   </p>
@@ -331,7 +347,7 @@ export function AdminPanel() {
             >
               <option value="">Select Team</option>
               {teams.map((team) => (
-                <option key={team.id} value={team.id}>{team.team_name}</option>
+                <option key={team.id} value={team.id}>{team.name}</option>
               ))}
             </select>
             <input
@@ -371,7 +387,7 @@ export function AdminPanel() {
             >
               <option value="">Select Team</option>
               {teams.map((team) => (
-                <option key={team.id} value={team.id}>{team.team_name}</option>
+                <option key={team.id} value={team.id}>{team.name}</option>
               ))}
             </select>
             <input
@@ -398,6 +414,47 @@ export function AdminPanel() {
         </div>
       </div>
 
+      {/* User Management */}
+      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-3 mb-4">
+          <Shield className="w-5 h-5 text-indigo-400" />
+          <h3 className="text-xl font-semibold text-purple-300">User Management</h3>
+        </div>
+        <div className="space-y-4">
+          {users.map((user) => {
+            const team = teams.find(t => t.leader_email === user.email);
+            return (
+              <div key={user.id} className="bg-white/5 p-4 rounded-xl">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-semibold text-white">{user.email}</h4>
+                    <p className="text-sm text-gray-400">
+                      {user.role === 'admin' ? 'Admin' : 'Team Leader'}
+                      {team && ` • ${team.name}`}
+                    </p>
+                  </div>
+                  {user.role !== 'admin' && (
+                    <button
+                      onClick={() => {
+                        if (dataService.deleteUser(user.id)) {
+                          toast.success('User deleted successfully');
+                          loadUsers();
+                          loadTeams();
+                        }
+                      }}
+                      className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
+                      title="Delete User"
+                    >
+                      <Ban className="w-5 h-5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Submission Logs */}
       <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
         <div className="flex items-center gap-3 mb-4">
@@ -411,7 +468,7 @@ export function AdminPanel() {
               <div key={submission.id} className="bg-white/5 p-4 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className="font-semibold text-white">{team?.team_name || 'Unknown Team'}</h4>
+                    <h4 className="font-semibold text-white">{team?.name || 'Unknown Team'}</h4>
                     <p className="text-sm text-gray-400">
                       Level {submission.level} • {submission.submission_type} • {submission.points} Points
                     </p>
