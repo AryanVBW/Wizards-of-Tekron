@@ -139,7 +139,7 @@ function App() {
     <div className="min-h-screen bg-[#0A0118] text-white">
       <Toaster position="top-right" />
       {/* Background Effects */}
-      <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072')] bg-cover bg-center opacity-5" />
+      <div className="fixed inset-0 bg-[url('https://github.com/nst-sdc/NST-image-database/releases/download/n1/harry-potter.jpg')] bg-cover bg-center opacity-5" />
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-indigo-900/20" />
 
       {isLoading ? (
