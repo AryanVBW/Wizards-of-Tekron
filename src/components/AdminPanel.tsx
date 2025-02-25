@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { AlertTriangle, Ban, Flag, History, MinusCircle } from 'lucide-react';
+import { dataService } from '../lib/dataService';
+import { 
+  AlertTriangle, Ban, Flag, History, MinusCircle, 
+  Wand2, Trophy, Star, Shield, Sparkles, Crown,
+  ArrowUp, Gift, Key
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
 interface TeamProfile {
@@ -21,43 +25,56 @@ interface TeamSubmission {
   created_at: string;
 }
 
+interface LevelKey {
+  id: string;
+  level: number;
+  key: string;
+  is_valid: boolean;
+}
+
 export function AdminPanel() {
   const [teams, setTeams] = useState<TeamProfile[]>([]);
   const [submissions, setSubmissions] = useState<TeamSubmission[]>([]);
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const [penaltyPoints, setPenaltyPoints] = useState<number>(0);
   const [penaltyReason, setPenaltyReason] = useState<string>('');
+  const [bonusPoints, setBonusPoints] = useState<number>(0);
+  const [bonusReason, setBonusReason] = useState<string>('');
+  const [newLevelKey, setNewLevelKey] = useState<string>('');
+  const [selectedLevel, setSelectedLevel] = useState<number>(1);
+  const [levelKeys, setLevelKeys] = useState<LevelKey[]>([]);
 
   useEffect(() => {
     loadTeams();
     loadSubmissions();
+    loadLevelKeys();
   }, []);
 
   async function loadTeams() {
-    const { data, error } = await supabase
-      .from('team_profiles')
-      .select('*')
-      .order('team_name');
-    
-    if (error) {
+    try {
+      const data = dataService.getTeams();
+      setTeams(data.sort((a, b) => a.team_name.localeCompare(b.team_name)));
+    } catch (error) {
       toast.error('Failed to load teams');
-      return;
     }
-    setTeams(data);
   }
 
   async function loadSubmissions() {
-    const { data, error } = await supabase
-      .from('team_submissions')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(50);
-    
-    if (error) {
+    try {
+      const data = dataService.getSubmissions();
+      setSubmissions(data.sort((a, b) => b.created_at.localeCompare(a.created_at)).slice(0, 50));
+    } catch (error) {
       toast.error('Failed to load submissions');
-      return;
     }
-    setSubmissions(data);
+  }
+
+  async function loadLevelKeys() {
+    try {
+      const data = dataService.getLevelKeys();
+      setLevelKeys(data.sort((a, b) => a.level - b.level));
+    } catch (error) {
+      toast.error('Failed to load level keys');
+    }
   }
 
   async function applyPenalty() {
@@ -66,133 +83,327 @@ export function AdminPanel() {
       return;
     }
 
-    const { error: penaltyError } = await supabase
-      .from('team_penalties')
-      .insert({
+    try {
+      // Create penalty submission
+      dataService.createSubmission({
         team_id: selectedTeam,
-        points_deducted: penaltyPoints,
-        reason: penaltyReason,
+        level: 0, // Penalties don't correspond to a level
+        submission_type: 'code',
+        status: 'success',
+        points: -penaltyPoints
       });
 
-    if (penaltyError) {
+      // Update team points
+      const team = dataService.getTeamById(selectedTeam);
+      if (!team) {
+        toast.error('Team not found');
+        return;
+      }
+
+      const updatedTeam = dataService.updateTeam(selectedTeam, {
+        total_points: team.total_points - penaltyPoints
+      });
+
+      if (!updatedTeam) {
+        toast.error('Failed to update team points');
+        return;
+      }
+
+      toast.success('Penalty applied successfully');
+      loadTeams();
+      setPenaltyPoints(0);
+      setPenaltyReason('');
+    } catch (error) {
       toast.error('Failed to apply penalty');
+    }
+  }
+
+  async function awardBonus() {
+    if (!selectedTeam || !bonusPoints || !bonusReason) {
+      toast.error('Please fill in all bonus details');
       return;
     }
 
-    const { error: updateError } = await supabase
-      .from('team_profiles')
-      .update({
-        total_points: supabase.raw(`total_points - ${penaltyPoints}`),
-      })
-      .eq('id', selectedTeam);
+    try {
+      // Create bonus submission
+      dataService.createSubmission({
+        team_id: selectedTeam,
+        level: 0, // Bonuses don't correspond to a level
+        submission_type: 'code',
+        status: 'success',
+        points: bonusPoints
+      });
 
-    if (updateError) {
-      toast.error('Failed to update team points');
+      // Update team points
+      const team = dataService.getTeamById(selectedTeam);
+      if (!team) {
+        toast.error('Team not found');
+        return;
+      }
+
+      const updatedTeam = dataService.updateTeam(selectedTeam, {
+        total_points: team.total_points + bonusPoints
+      });
+
+      if (!updatedTeam) {
+        toast.error('Failed to update team points');
+        return;
+      }
+
+      toast.success('Bonus points awarded successfully');
+      loadTeams();
+      setBonusPoints(0);
+      setBonusReason('');
+    } catch (error) {
+      toast.error('Failed to award bonus points');
+    }
+  }
+
+  async function addLevelKey() {
+    if (!newLevelKey || !selectedLevel) {
+      toast.error('Please provide both level and key');
       return;
     }
 
-    toast.success('Penalty applied successfully');
-    loadTeams();
-    setPenaltyPoints(0);
-    setPenaltyReason('');
+    try {
+      dataService.createLevelKey({
+        level: selectedLevel,
+        key: newLevelKey,
+        is_valid: true
+      });
+
+      toast.success('Level key added successfully');
+      loadLevelKeys();
+      setNewLevelKey('');
+    } catch (error) {
+      toast.error('Failed to add level key');
+    }
   }
 
   async function updateTeamStatus(teamId: string, status: 'active' | 'disqualified' | 'spam') {
-    const { error } = await supabase
-      .from('team_profiles')
-      .update({ status })
-      .eq('id', teamId);
+    try {
+      const updatedTeam = dataService.updateTeam(teamId, { status });
+      if (!updatedTeam) {
+        toast.error('Failed to update team status');
+        return;
+      }
 
-    if (error) {
-      toast.error(`Failed to update team status`);
-      return;
+      toast.success(`Team ${status} successfully`);
+      loadTeams();
+    } catch (error) {
+      toast.error('Failed to update team status');
     }
+  }
 
-    toast.success(`Team ${status} successfully`);
-    loadTeams();
+  async function updateTeamLevel(teamId: string, newLevel: number) {
+    try {
+      const updatedTeam = dataService.updateTeam(teamId, { current_level: newLevel });
+      if (!updatedTeam) {
+        toast.error('Failed to update team level');
+        return;
+      }
+
+      toast.success('Team level updated successfully');
+      loadTeams();
+    } catch (error) {
+      toast.error('Failed to update team level');
+    }
   }
 
   return (
     <div className="space-y-8">
       {/* Admin Header */}
       <div className="bg-gradient-to-r from-purple-900/50 to-pink-900/50 p-6 rounded-2xl border border-purple-500/20">
-        <h2 className="text-2xl font-bold text-white mb-2">Admin Control Panel</h2>
-        <p className="text-purple-200">Manage teams, track submissions, and maintain fair play</p>
+        <div className="flex items-center gap-3 mb-2">
+          <Crown className="w-6 h-6 text-yellow-400" />
+          <h2 className="text-2xl font-bold text-white">Headmaster's Control Panel</h2>
+        </div>
+        <p className="text-purple-200">Manage teams, track submissions, and maintain order in the magical realm</p>
       </div>
 
-      {/* Penalty System */}
+      {/* Level Key Management */}
       <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-        <h3 className="text-xl font-semibold mb-4 text-purple-300">Apply Penalty</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="flex items-center gap-3 mb-4">
+          <Key className="w-5 h-5 text-purple-400" />
+          <h3 className="text-xl font-semibold text-purple-300">Level Keys</h3>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <select
-            value={selectedTeam || ''}
-            onChange={(e) => setSelectedTeam(e.target.value)}
+            value={selectedLevel}
+            onChange={(e) => setSelectedLevel(parseInt(e.target.value))}
             className="bg-white/5 border border-white/10 rounded-xl p-3 text-white"
           >
-            <option value="">Select Team</option>
-            {teams.map((team) => (
-              <option key={team.id} value={team.id}>{team.team_name}</option>
+            {[1, 2, 3, 4, 5].map(level => (
+              <option key={level} value={level}>Level {level}</option>
             ))}
           </select>
           <input
-            type="number"
-            value={penaltyPoints}
-            onChange={(e) => setPenaltyPoints(parseInt(e.target.value))}
-            placeholder="Points to Deduct"
-            className="bg-white/5 border border-white/10 rounded-xl p-3 text-white"
-          />
-          <input
             type="text"
-            value={penaltyReason}
-            onChange={(e) => setPenaltyReason(e.target.value)}
-            placeholder="Reason"
+            value={newLevelKey}
+            onChange={(e) => setNewLevelKey(e.target.value)}
+            placeholder="New Level Key"
             className="bg-white/5 border border-white/10 rounded-xl p-3 text-white"
           />
+          <button
+            onClick={addLevelKey}
+            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl text-white font-semibold transition-colors duration-200"
+          >
+            Add Key
+          </button>
         </div>
-        <button
-          onClick={applyPenalty}
-          className="mt-4 px-6 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-white font-semibold transition-colors duration-200"
-        >
-          Apply Penalty
-        </button>
-      </div>
-
-      {/* Teams List */}
-      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-        <h3 className="text-xl font-semibold mb-4 text-purple-300">Teams Overview</h3>
-        <div className="space-y-4">
-          {teams.map((team) => (
-            <div key={team.id} className="flex items-center justify-between bg-white/5 p-4 rounded-xl">
-              <div>
-                <h4 className="font-semibold text-white">{team.team_name}</h4>
-                <p className="text-sm text-gray-400">
-                  Level {team.current_level} • {team.total_points} Points
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => updateTeamStatus(team.id, 'spam')}
-                  className="p-2 text-yellow-500 hover:bg-yellow-500/20 rounded-lg transition-colors duration-200"
-                  title="Mark as Spam"
-                >
-                  <Flag className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => updateTeamStatus(team.id, 'disqualified')}
-                  className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
-                  title="Disqualify Team"
-                >
-                  <Ban className="w-5 h-5" />
-                </button>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {levelKeys.map(key => (
+            <div key={key.id} className="bg-white/5 p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <span className="text-purple-300">Level {key.level}</span>
+                <span className="text-white font-mono">{key.key}</span>
               </div>
             </div>
           ))}
         </div>
       </div>
 
+      {/* Team Management */}
+      <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+        <div className="flex items-center gap-3 mb-4">
+          <Wand2 className="w-5 h-5 text-purple-400" />
+          <h3 className="text-xl font-semibold text-purple-300">Team Management</h3>
+        </div>
+        <div className="space-y-4">
+          {teams.map((team) => (
+            <div key={team.id} className="bg-white/5 p-4 rounded-xl">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-white">{team.team_name}</h4>
+                  <p className="text-sm text-gray-400">
+                    Level {team.current_level} • {team.total_points} Points
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => updateTeamLevel(team.id, Math.min(5, team.current_level + 1))}
+                    className="p-2 text-green-500 hover:bg-green-500/20 rounded-lg transition-colors duration-200"
+                    title="Level Up"
+                  >
+                    <ArrowUp className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setSelectedTeam(team.id)}
+                    className="p-2 text-yellow-500 hover:bg-yellow-500/20 rounded-lg transition-colors duration-200"
+                    title="Award/Deduct Points"
+                  >
+                    <Star className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => updateTeamStatus(team.id, 'spam')}
+                    className="p-2 text-yellow-500 hover:bg-yellow-500/20 rounded-lg transition-colors duration-200"
+                    title="Mark as Spam"
+                  >
+                    <Flag className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => updateTeamStatus(team.id, 'disqualified')}
+                    className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
+                    title="Disqualify Team"
+                  >
+                    <Ban className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Points Management */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {/* Penalty System */}
+        <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-3 mb-4">
+            <MinusCircle className="w-5 h-5 text-red-400" />
+            <h3 className="text-xl font-semibold text-purple-300">Apply Penalty</h3>
+          </div>
+          <div className="space-y-4">
+            <select
+              value={selectedTeam || ''}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"
+            >
+              <option value="">Select Team</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>{team.team_name}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={penaltyPoints}
+              onChange={(e) => setPenaltyPoints(parseInt(e.target.value))}
+              placeholder="Points to Deduct"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"
+            />
+            <input
+              type="text"
+              value={penaltyReason}
+              onChange={(e) => setPenaltyReason(e.target.value)}
+              placeholder="Reason"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"
+            />
+            <button
+              onClick={applyPenalty}
+              className="w-full px-6 py-3 bg-red-500 hover:bg-red-600 rounded-xl text-white font-semibold transition-colors duration-200"
+            >
+              Apply Penalty
+            </button>
+          </div>
+        </div>
+
+        {/* Bonus System */}
+        <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
+          <div className="flex items-center gap-3 mb-4">
+            <Gift className="w-5 h-5 text-green-400" />
+            <h3 className="text-xl font-semibold text-purple-300">Award Bonus</h3>
+          </div>
+          <div className="space-y-4">
+            <select
+              value={selectedTeam || ''}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"
+            >
+              <option value="">Select Team</option>
+              {teams.map((team) => (
+                <option key={team.id} value={team.id}>{team.team_name}</option>
+              ))}
+            </select>
+            <input
+              type="number"
+              value={bonusPoints}
+              onChange={(e) => setBonusPoints(parseInt(e.target.value))}
+              placeholder="Bonus Points"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"
+            />
+            <input
+              type="text"
+              value={bonusReason}
+              onChange={(e) => setBonusReason(e.target.value)}
+              placeholder="Reason"
+              className="w-full bg-white/5 border border-white/10 rounded-xl p-3 text-white"
+            />
+            <button
+              onClick={awardBonus}
+              className="w-full px-6 py-3 bg-green-500 hover:bg-green-600 rounded-xl text-white font-semibold transition-colors duration-200"
+            >
+              Award Bonus
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Submission Logs */}
       <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
-        <h3 className="text-xl font-semibold mb-4 text-purple-300">Recent Submissions</h3>
+        <div className="flex items-center gap-3 mb-4">
+          <History className="w-5 h-5 text-blue-400" />
+          <h3 className="text-xl font-semibold text-purple-300">Recent Submissions</h3>
+        </div>
         <div className="space-y-4">
           {submissions.map((submission) => {
             const team = teams.find(t => t.id === submission.team_id);

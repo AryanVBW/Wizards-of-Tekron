@@ -1,0 +1,154 @@
+{
+  "levelKeys": [
+  {
+    "id": "1",
+    "level": 1,
+    "key": "LUMOS_MAXIMA_2025",
+    "is_valid": true
+  },
+  {
+    "id": "2",
+    "level": 2,
+    "key": "ALOHOMORA_BINARY",
+    "is_valid": true
+  },
+  {
+    "id": "3",
+    "level": 3,
+    "key": "EXPECTO_RECURSION",
+    "is_valid": true
+  },
+  {
+    "id": "4",
+    "level": 4,
+    "key": "ACCIO_CODE_DATA",
+    "is_valid": true
+  },
+  {
+    "id": "5",
+    "level": 5,
+    "key": "WINGARDIUM_LEVIOSA",
+    "is_valid": true
+  },
+  {
+    "id": "6",
+    "level": 6,
+    "key": "FELIX_FELICIS_SORT",
+    "is_valid": true
+  },
+  {
+    "id": "7",
+    "level": 7,
+    "key": "DEATHLY_ALGORITHMS",
+    "is_valid": true
+  },
+  {
+    "id": "8",
+    "level": 8,
+    "key": "DIAGON_ARRAY_SORT",
+    "is_valid": true
+  },
+  {
+    "id": "9",
+    "level": 9,
+    "key": "EXPRESS_ROUTE_9_75",
+    "is_valid": true
+  },
+  {
+    "id": "10",
+    "level": 10,
+    "key": "QUIDDITCH_SEEKER",
+    "is_valid": true
+  },
+  {
+    "id": "11",
+    "level": 11,
+    "key": "TRIWIZARD_CHAMPION",
+    "is_valid": true
+  },
+  {
+    "id": "12",
+    "level": 12,
+    "key": "MARAUDER_PATHFIND",
+    "is_valid": true
+  },
+  {
+    "id": "13",
+    "level": 13,
+    "key": "DEBUG_ALOHOMORA",
+    "is_valid": true
+  },
+  {
+    "id": "14",
+    "level": 14,
+    "key": "FOREST_DFS_BFS",
+    "is_valid": true
+  },
+  {
+    "id": "15",
+    "level": 15,
+    "key": "GRINGOTTS_VAULT_713",
+    "is_valid": true
+  },
+  {
+    "id": "16",
+    "level": 16,
+    "key": "MINISTRY_SECURITY",
+    "is_valid": true
+  },
+  {
+    "id": "17",
+    "level": 17,
+    "key": "PLATFORM_SORT_975",
+    "is_valid": true
+  },
+  {
+    "id": "18",
+    "level": 18,
+    "key": "DUMBLEDORES_ARMY",
+    "is_valid": true
+  },
+  {
+    "id": "19",
+    "level": 19,
+    "key": "HORCRUX_SEARCH",
+    "is_valid": true
+  },
+  {
+    "id": "20",
+    "level": 20,
+    "key": "PATRONUS_REGEX",
+    "is_valid": true
+  },
+  {
+    "id": "21",
+    "level": 21,
+    "key": "WIZARD_CHESS_AI",
+    "is_valid": true
+  },
+  {
+    "id": "22",
+    "level": 22,
+    "key": "PENSIEVE_CACHE",
+    "is_valid": true
+  },
+  {
+    "id": "23",
+    "level": 23,
+    "key": "AZKABAN_ESCAPE",
+    "is_valid": true
+  },
+  {
+    "id": "24",
+    "level": 24,
+    "key": "HOGWARTS_BATTLE",
+    "is_valid": true
+  },
+  {
+    "id": "25",
+    "level": 25,
+    "key": "ELDER_WAND_FINAL",
+    "is_valid": true
+  }
+  ]
+}

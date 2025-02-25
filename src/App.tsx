@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Wand2, Trophy, Shield, Timer, Users, Brain, QrCode, Layout, Sparkles } from 'lucide-react';
+import { Wand2, Trophy, Shield, Timer, Users, Brain, QrCode, Layout, Sparkles, Settings } from 'lucide-react';
 import { LoginForm } from './components/LoginForm';
-import { AdminPanel } from './components/AdminPanel';
-import { supabase } from './lib/supabase';
+import { Dashboard } from './pages/Dashboard';
+import { LeaderboardPage } from './pages/Leaderboard';
+import { QuestionsPage } from './pages/Questions';
+import { AdminPanel } from './pages/AdminPanel';
+import { dataService } from './lib/dataService';
 import { Toaster } from 'react-hot-toast';
 
 function FeatureCard({ icon: Icon, title, description }: { icon: React.ElementType, title: string, description: string }) {
@@ -32,70 +35,140 @@ function StatCard({ number, label }: { number: string, label: string }) {
   );
 }
 
+function Navigation({ isAdmin, activeSection, setActiveSection }: { isAdmin: boolean; activeSection: string; setActiveSection: (section: string) => void }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleLogout = () => {
+    localStorage.removeItem('userEmail');
+    window.location.reload();
+  };
+
+  return (
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-black/20 backdrop-blur-lg border-b border-white/10">
+      <div className="container mx-auto px-4">
+        <div className="flex items-center justify-between h-20">
+          <div className="flex items-center gap-2">
+            <Wand2 className="w-6 h-6 text-purple-400" />
+            <span className="text-xl font-bold">Wizards of Tekron</span>
+          </div>
+          <div className="flex items-center gap-6">
+            <button 
+              onClick={() => setActiveSection('dashboard')}
+              className={`text-gray-300 hover:text-white transition-colors duration-200 ${activeSection === 'dashboard' ? 'text-white' : ''}`}
+            >
+              Dashboard
+            </button>
+            <button 
+              onClick={() => setActiveSection('questions')}
+              className={`text-gray-300 hover:text-white transition-colors duration-200 ${activeSection === 'questions' ? 'text-white' : ''}`}
+            >
+              Questions
+            </button>
+            <button 
+              onClick={() => setActiveSection('leaderboard')}
+              className={`text-gray-300 hover:text-white transition-colors duration-200 ${activeSection === 'leaderboard' ? 'text-white' : ''}`}
+            >
+              Leaderboard
+            </button>
+            {isAdmin && (
+              <button 
+                onClick={() => setActiveSection('admin')}
+                className={`text-gray-300 hover:text-white transition-colors duration-200 ${activeSection === 'admin' ? 'text-white' : ''}`}
+              >
+                Admin
+              </button>
+            )}
+            <button
+              onClick={handleLogout}
+              className="px-4 py-2 rounded-xl bg-purple-500 hover:bg-purple-600 text-white font-medium transition-colors duration-200"
+            >
+              Logout
+            </button>
+          </div>
+        </div>
+      </div>
+    </nav>
+  );
+}
+
+
+
 function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState<{ user: any } | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeSection, setActiveSection] = useState('dashboard');
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setIsAdmin(session?.user?.email === 'vivek.aryanvbw@gmail.com');
-    });
+    const initializeSession = async () => {
+      try {
+        setIsLoading(true);
+        const userEmail = localStorage.getItem('userEmail');
+        if (userEmail) {
+          const user = dataService.getUserByEmail(userEmail);
+          if (user) {
+            setSession({ user });
+            setIsAdmin(user.email === 'vivek.aryanvbw@gmail.com');
+          } else {
+            localStorage.removeItem('userEmail');
+          }
+        }
+      } catch (error) {
+        console.error('Error checking session:', error);
+        localStorage.removeItem('userEmail');
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      setIsAdmin(session?.user?.email === 'vivek.aryanvbw@gmail.com');
-    });
-
-    return () => subscription.unsubscribe();
+    initializeSession();
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#0A0118] text-white overflow-hidden">
+    <div className="min-h-screen bg-[#0A0118] text-white">
       <Toaster position="top-right" />
       {/* Background Effects */}
       <div className="fixed inset-0 bg-[url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072')] bg-cover bg-center opacity-5" />
       <div className="fixed inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-indigo-900/20" />
 
-      {/* Hero Section */}
-      <div className="relative">
-        <div className="container mx-auto px-4 pt-32 pb-24">
-          <div className="max-w-5xl mx-auto text-center">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
-              <Sparkles className="w-4 h-4 text-purple-400" />
-              <span className="text-sm font-medium text-purple-300">Hackathon in Progress</span>
-            </div>
-            <h1 className="text-7xl font-bold mb-8 leading-tight">
-              <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 text-transparent bg-clip-text">
-                Wizards of Tekron
-              </span>
-            </h1>
-            {!session ? (
-              <>
-                <p className="text-2xl text-gray-300 mb-12 leading-relaxed max-w-3xl mx-auto">
-                  Embark on an extraordinary journey where coding prowess meets magical challenges in this unique hackathon experience
-                </p>
-                <div className="flex flex-col items-center max-w-sm mx-auto">
-                  <LoginForm />
-                </div>
-              </>
-            ) : (
-              <div className="bg-white/5 backdrop-blur-lg p-8 rounded-2xl border border-white/10">
-                {isAdmin ? (
-                  <AdminPanel />
-                ) : (
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4">Welcome back, Team!</h2>
-                    {/* Add team dashboard content here */}
-                  </div>
-                )}
+      {isLoading ? (
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-purple-500"></div>
+        </div>
+      ) : !session ? (
+        // Login Screen
+        <div className="relative min-h-screen flex items-center justify-center">
+          <div className="container mx-auto px-4">
+            <div className="max-w-5xl mx-auto text-center">
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 mb-8">
+                <Sparkles className="w-4 h-4 text-purple-400" />
+                <span className="text-sm font-medium text-purple-300">Hackathon in Progress</span>
               </div>
-            )}
+              <h1 className="text-7xl font-bold mb-8 leading-tight">
+                <span className="bg-gradient-to-r from-purple-400 via-pink-500 to-purple-600 text-transparent bg-clip-text">
+                  Wizards of Tekron
+                </span>
+              </h1>
+              <p className="text-2xl text-gray-300 mb-12 leading-relaxed max-w-3xl mx-auto">
+                Embark on an extraordinary journey where coding prowess meets magical challenges in this unique hackathon experience
+              </p>
+              <div className="flex flex-col items-center max-w-sm mx-auto">
+                <LoginForm />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      ) : (
+        // Main App
+        <div className="relative">
+          <Navigation isAdmin={isAdmin} activeSection={activeSection} setActiveSection={setActiveSection} />
+          {activeSection === 'dashboard' && <Dashboard isAdmin={isAdmin} />}
+          {activeSection === 'leaderboard' && <LeaderboardPage />}
+        {activeSection === 'admin' && <AdminPanel />}
+          {activeSection === 'questions' && <QuestionsPage />}
+        </div>
+      )}
+
 
       {/* Only show marketing sections when not logged in */}
       {!session && (
