@@ -206,13 +206,20 @@ class DataService {
   }
 
   updateTeamLevel(teamId: string, newLevel: number): boolean {
-    const team = this.getTeamById(teamId);
-    if (!team) return false;
+    const teamIndex = this.teams.findIndex(team => team.id === teamId);
+    if (teamIndex === -1) return false;
 
+    const team = this.teams[teamIndex];
     // Only allow progressing to the next level
     if (newLevel !== team.current_level + 1) return false;
 
-    team.current_level = newLevel;
+    // Update team level and points
+    this.teams[teamIndex] = {
+      ...team,
+      current_level: newLevel,
+      total_points: team.total_points + 100 // Add points for completing the level
+    };
+
     localStorage.setItem(this.TEAMS_KEY, JSON.stringify(this.teams));
     return true;
   }

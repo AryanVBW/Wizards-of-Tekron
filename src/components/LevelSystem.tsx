@@ -44,20 +44,20 @@ export function LevelSystem({ currentLevel, totalPoints, onLevelUp }: LevelSyste
         const team = dataService.getTeamByUserId(user.id);
         if (!team) throw new Error('Team not found');
 
-        // Create successful submission
-        dataService.createSubmission({
-          team_id: user.id,
-          level: currentLevel,
-          submission_type: 'code',
-          status: 'success',
-          points: 100
-        });
-
-        // Update team level
+        // Update team level first
         const nextLevel = currentLevel + 1;
         const levelUpdated = dataService.updateTeamLevel(team.id, nextLevel);
         
         if (levelUpdated) {
+          // Create successful submission after level update
+          dataService.createSubmission({
+            team_id: team.id, // Use team.id instead of user.id
+            level: currentLevel,
+            submission_type: 'code',
+            status: 'success',
+            points: 100
+          });
+
           await onLevelUp(nextLevel);
           toast.success('Level completed! Welcome to the next challenge! 🎉');
           setLevelUpKey('');

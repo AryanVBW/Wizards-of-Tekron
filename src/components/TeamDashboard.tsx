@@ -13,10 +13,11 @@ interface TeamStats {
 export function TeamDashboard() {
   interface TeamProfile {
     id: string;
-    team_name: string;
-    status: 'active' | 'disqualified' | 'spam';
+    name: string;
+    leader_email: string;
     current_level: number;
     total_points: number;
+    created_at: string;
   }
 
   const [teamProfile, setTeamProfile] = useState<TeamProfile | null>(null);
@@ -61,10 +62,11 @@ export function TeamDashboard() {
       let profile = dataService.getTeamById(user.id);
       if (!profile) {
         profile = dataService.createTeam({
-          team_name: user.email.split('@')[0],
-          status: 'active',
+          name: user.email.split('@')[0],
+          leader_email: user.email,
           current_level: 1,
-          total_points: 0
+          total_points: 0,
+          created_at: new Date().toISOString()
         });
       }
 
