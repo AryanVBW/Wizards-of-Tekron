@@ -50,7 +50,7 @@ export function AdminPanel() {
   const [penaltyReason, setPenaltyReason] = useState<string>('');
   const [bonusPoints, setBonusPoints] = useState<number>(0);
   const [bonusReason, setBonusReason] = useState<string>('');
-  const [newLevelKey, setNewLevelKey] = useState<string>('');
+  const [levelKeyInputs, setLevelKeyInputs] = useState<{[key: number]: string}>({});
   const [selectedLevel, setSelectedLevel] = useState<number>(1);
   const [levelKeys, setLevelKeys] = useState<LevelKey[]>([]);
 
@@ -243,39 +243,55 @@ export function AdminPanel() {
           <Key className="w-5 h-5 text-purple-400" />
           <h3 className="text-xl font-semibold text-purple-300">Level Keys</h3>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-          <select
-            value={selectedLevel}
-            onChange={(e) => setSelectedLevel(parseInt(e.target.value))}
-            className="bg-white/5 border border-white/10 rounded-xl p-3 text-white"
-          >
-            {[1, 2, 3, 4, 5].map(level => (
-              <option key={level} value={level}>Level {level}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            value={newLevelKey}
-            onChange={(e) => setNewLevelKey(e.target.value)}
-            placeholder="New Level Key"
-            className="bg-white/5 border border-white/10 rounded-xl p-3 text-white"
-          />
-          <button
-            onClick={addLevelKey}
-            className="px-6 py-3 bg-purple-600 hover:bg-purple-700 rounded-xl text-white font-semibold transition-colors duration-200"
-          >
-            Add Key
-          </button>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {levelKeys.map(key => (
-            <div key={key.id} className="bg-white/5 p-4 rounded-xl">
-              <div className="flex items-center justify-between">
-                <span className="text-purple-300">Level {key.level}</span>
-                <span className="text-white font-mono">{key.key}</span>
+        <div className="grid grid-cols-1 gap-4">
+          {[1, 2, 3, 4, 5].map(level => {
+            const levelKey = levelKeys.find(k => k.level === level);
+            return (
+              <div key={level} className="bg-white/5 p-4 rounded-xl">
+                <div className="flex items-center gap-4">
+                  <span className="text-purple-300 w-24">Level {level}</span>
+                  <input
+                    type="text"
+                    value={levelKeyInputs[level] ?? levelKey?.key ?? ''}
+                    onChange={(e) => {
+                      setLevelKeyInputs(prev => ({
+                        ...prev,
+                        [level]: e.target.value
+                      }));
+                    }}
+                    placeholder="Enter level key"
+                    className="flex-1 bg-white/5 border border-white/10 rounded-xl p-3 text-white font-mono"
+                  />
+                  <button
+                    onClick={() => {
+                      const newKey = levelKeyInputs[level];
+                      if (newKey) {
+                        const result = dataService.createLevelKey({
+                          level,
+                          key: newKey,
+                          is_valid: true
+                        });
+                        if (result) {
+                          toast.success(`Level ${level} key updated`);
+                          loadLevelKeys();
+                          // Clear the input state for this level
+                          setLevelKeyInputs(prev => {
+                            const next = { ...prev };
+                            delete next[level];
+                            return next;
+                          });
+                        }
+                      }
+                    }}
+                    className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-xl text-white font-semibold transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!levelKeyInputs[level] || levelKeyInputs[level] === levelKey?.key}
+                  >
+                    Update
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -311,16 +327,19 @@ export function AdminPanel() {
                     <Star className="w-5 h-5" />
                   </button>
                   <button
-                    onClick={() => updateTeamStatus(team.id, 'spam')}
-                    className="p-2 text-yellow-500 hover:bg-yellow-500/20 rounded-lg transition-colors duration-200"
-                    title="Mark as Spam"
-                  >
-                    <Flag className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => updateTeamStatus(team.id, 'disqualified')}
+                    onClick={() => {
+                      if (window.confirm(`Are you sure you want to delete team '${team.name}'? This action cannot be undone.`)) {
+                        if (dataService.deleteTeam(team.id)) {
+                          toast.success('Team deleted successfully');
+                          loadTeams();
+                          loadSubmissions();
+                        } else {
+                          toast.error('Failed to delete team');
+                        }
+                      }
+                    }}
                     className="p-2 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
-                    title="Disqualify Team"
+                    title="Delete Team"
                   >
                     <Ban className="w-5 h-5" />
                   </button>

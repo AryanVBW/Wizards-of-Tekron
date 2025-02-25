@@ -229,6 +229,22 @@ class DataService {
     return this.teams[index];
   }
 
+  deleteTeam(id: string): boolean {
+    const index = this.teams.findIndex(team => team.id === id);
+    if (index === -1) return false;
+
+    // Remove team
+    this.teams.splice(index, 1);
+
+    // Remove associated submissions
+    this.submissions = this.submissions.filter(s => s.team_id !== id);
+
+    // Save changes
+    localStorage.setItem(this.TEAMS_KEY, JSON.stringify(this.teams));
+    localStorage.setItem(this.SUBMISSIONS_KEY, JSON.stringify(this.submissions));
+    return true;
+  }
+
   // Submissions
   getSubmissions(): TeamSubmission[] {
     return this.submissions;
@@ -250,12 +266,32 @@ class DataService {
     return this.levelKeys;
   }
 
-  createLevelKey(levelKeyData: Omit<LevelKey, 'id'>): LevelKey {
+  createLevelKey(levelKeyData: Omit<LevelKey, 'id'>): LevelKey | null {
+    // Validate level
+    if (levelKeyData.level < 1 || levelKeyData.level > 5) {
+      toast.error('Invalid level number');
+      return null;
+    }
+
+    // Find existing key for this level
+    const existingIndex = this.levelKeys.findIndex(k => k.level === levelKeyData.level);
+
     const newLevelKey: LevelKey = {
       id: uuidv4(),
       ...levelKeyData
     };
-    this.levelKeys.push(newLevelKey);
+
+    if (existingIndex !== -1) {
+      // Update existing key
+      this.levelKeys[existingIndex] = newLevelKey;
+    } else {
+      // Add new key
+      this.levelKeys.push(newLevelKey);
+    }
+
+    // Sort keys by level
+    this.levelKeys.sort((a, b) => a.level - b.level);
+
     localStorage.setItem(this.LEVEL_KEYS_KEY, JSON.stringify(this.levelKeys));
     return newLevelKey;
   }
