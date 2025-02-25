@@ -205,6 +205,18 @@ class DataService {
     return teams.find(team => team.id === id) || null;
   }
 
+  updateTeamLevel(teamId: string, newLevel: number): boolean {
+    const team = this.getTeamById(teamId);
+    if (!team) return false;
+
+    // Only allow progressing to the next level
+    if (newLevel !== team.current_level + 1) return false;
+
+    team.current_level = newLevel;
+    localStorage.setItem(this.TEAMS_KEY, JSON.stringify(this.teams));
+    return true;
+  }
+
   createTeam(teamData: Omit<TeamProfile, 'id' | 'current_level' | 'total_points'>): TeamProfile {
     const newTeam: TeamProfile = {
       id: `team-${Date.now()}`,

@@ -41,6 +41,10 @@ export function LevelSystem({ currentLevel, totalPoints, onLevelUp }: LevelSyste
         const user = dataService.getUserByEmail(userEmail);
         if (!user) throw new Error('User not found');
 
+        const team = dataService.getTeamByUserId(user.id);
+        if (!team) throw new Error('Team not found');
+
+        // Create successful submission
         dataService.createSubmission({
           team_id: user.id,
           level: currentLevel,
@@ -49,10 +53,17 @@ export function LevelSystem({ currentLevel, totalPoints, onLevelUp }: LevelSyste
           points: 100
         });
 
+        // Update team level
         const nextLevel = currentLevel + 1;
-        await onLevelUp(nextLevel);
-        toast.success('Level completed! Welcome to the next challenge!');
-        setLevelUpKey('');
+        const levelUpdated = dataService.updateTeamLevel(team.id, nextLevel);
+        
+        if (levelUpdated) {
+          await onLevelUp(nextLevel);
+          toast.success('Level completed! Welcome to the next challenge! 🎉');
+          setLevelUpKey('');
+        } else {
+          toast.error('Failed to update level. Please try again.');
+        }
       } else {
         toast.error('Invalid key! Try again, young wizard.');
       }
@@ -91,19 +102,52 @@ export function LevelSystem({ currentLevel, totalPoints, onLevelUp }: LevelSyste
               Level {currentLevel}: {levelTitles[currentLevel - 1]}
             </h2>
           </div>
-          <div className="flex items-center gap-4 text-gray-300">
+          <div className="flex items-center gap-4 text-gray-300 mb-6">
             <span className="px-3 py-1 rounded-full bg-purple-500/20 text-purple-400 text-sm">
               {totalPoints} Points
             </span>
             <span className="text-sm">
-              Challenge {currentLevel} of 25
+              Challenge {currentLevel} of {TOTAL_LEVELS}
             </span>
+          </div>
+          {/* Progress Bar */}
+          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-500"
+              style={{ width: `${(currentLevel / TOTAL_LEVELS) * 100}%` }}
+            />
           </div>
         </div>
       </div>
 
+      {/* Level Navigation */}
+      <div className="grid grid-cols-5 gap-2">
+        {Array.from({ length: TOTAL_LEVELS }).map((_, index) => {
+          const levelNum = index + 1;
+          const isLocked = levelNum > currentLevel;
+          const isCompleted = levelNum < currentLevel;
+          return (
+            <div 
+              key={levelNum}
+              className={`p-4 rounded-xl border ${isLocked ? 'bg-gray-900/50 border-gray-800' : isCompleted ? 'bg-purple-900/20 border-purple-500/50' : 'bg-white/5 border-white/10'}
+                         flex items-center justify-center gap-2 ${isLocked ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/10'}`}
+            >
+              <span className={`text-sm font-medium ${isCompleted ? 'text-purple-400' : 'text-gray-400'}`}>
+                Level {levelNum}
+              </span>
+              {isLocked && <KeyRound className="w-4 h-4 text-gray-600" />}
+            </div>
+          );
+        })}
+      </div>
+
       {/* Level Content */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 relative">
+        {currentLevel > 1 && (
+          <div className="absolute -top-4 left-0 right-0 bg-green-500/20 text-green-400 p-2 rounded-lg text-center">
+            Level {currentLevel - 1} completed! 🎉
+          </div>
+        )}
         {/* Question Section */}
         <div className="bg-white/5 rounded-2xl border border-white/10 p-6 space-y-6">
           <div className="space-y-4">
