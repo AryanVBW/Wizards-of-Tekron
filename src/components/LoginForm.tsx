@@ -72,6 +72,20 @@ export function LoginForm() {
         )}
         <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
       </button>
+      <p className="text-center text-gray-400">
+        Don't have a team?{' '}
+        <a 
+          href="/signup" 
+          onClick={(e) => {
+            e.preventDefault();
+            window.history.pushState({}, '', '/signup');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          }} 
+          className="text-purple-500 hover:text-purple-400"
+        >
+          Create one here
+        </a>
+      </p>
     </form>
   );
 }

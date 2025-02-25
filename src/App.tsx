@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Wand2, Trophy, Shield, Timer, Users, Brain, QrCode, Layout, Sparkles, Settings } from 'lucide-react';
 import { LoginForm } from './components/LoginForm';
+import { SignupForm } from './components/SignupForm';
 import { Dashboard } from './pages/Dashboard';
 import { LeaderboardPage } from './pages/Leaderboard';
 import { QuestionsPage } from './pages/Questions';
@@ -98,6 +99,16 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [activeSection, setActiveSection] = useState('dashboard');
+  const [currentPath, setCurrentPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setCurrentPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   useEffect(() => {
     const initializeSession = async () => {
@@ -153,7 +164,7 @@ function App() {
                 Embark on an extraordinary journey where coding prowess meets magical challenges in this unique hackathon experience
               </p>
               <div className="flex flex-col items-center max-w-sm mx-auto">
-                <LoginForm />
+                {currentPath === '/signup' ? <SignupForm /> : <LoginForm />}
               </div>
             </div>
           </div>

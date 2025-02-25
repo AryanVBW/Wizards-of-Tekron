@@ -3,12 +3,15 @@ import teamsData from '../data/teams.json';
 import submissionsData from '../data/submissions.json';
 import levelKeysData from '../data/level-keys.json';
 import usersData from '../data/users.json';
+import { toast } from 'react-hot-toast';
 
 interface TeamProfile {
   id: string;
-  user_id: string;
+  name: string;
+  leader_email: string;
   current_level: number;
   total_points: number;
+  created_at: string;
 }
 
 interface TeamSubmission {
@@ -47,7 +50,7 @@ interface User {
   id: string;
   email: string;
   password: string;
-  role: 'admin' | 'team';
+  role: 'admin' | 'team_leader';
   created_at: string;
 }
 
@@ -202,11 +205,16 @@ class DataService {
     return teams.find(team => team.id === id) || null;
   }
 
-  createTeam(teamData: Omit<TeamProfile, 'id'>): TeamProfile {
+  createTeam(teamData: Omit<TeamProfile, 'id' | 'current_level' | 'total_points'>): TeamProfile {
     const newTeam: TeamProfile = {
-      id: uuidv4(),
-      ...teamData
+      id: `team-${Date.now()}`,
+      name: teamData.name,
+      leader_email: teamData.leader_email,
+      current_level: 1,
+      total_points: 0,
+      created_at: teamData.created_at
     };
+
     this.teams.push(newTeam);
     localStorage.setItem(this.TEAMS_KEY, JSON.stringify(this.teams));
     return newTeam;
@@ -276,18 +284,59 @@ class DataService {
     }
   }
 
-  createUser(userData: Omit<User, 'id' | 'created_at'>): User {
+  createUser(userData: Omit<User, 'id'>): User {
+    const existingUser = this.getUserByEmail(userData.email);
+    if (existingUser) {
+      throw new Error('User with this email already exists');
+    }
+
     const newUser: User = {
-      id: uuidv4(),
-      created_at: new Date().toISOString(),
-      ...userData
+      id: `user-${Date.now()}`,
+      email: userData.email,
+      password: userData.password,
+      role: userData.role,
+      created_at: userData.created_at
     };
+
     this.users.push(newUser);
     localStorage.setItem(this.USERS_KEY, JSON.stringify(this.users));
     return newUser;
   }
 
   // Admin methods
+  deleteUser(userId: string): boolean {
+    try {
+      const userIndex = this.users.findIndex(u => u.id === userId);
+      if (userIndex === -1) return false;
+
+      // Don't allow deleting the last admin
+      const isAdmin = this.users[userIndex].role === 'admin';
+      if (isAdmin) {
+        const adminCount = this.users.filter(u => u.role === 'admin').length;
+        if (adminCount <= 1) {
+          toast.error('Cannot delete the last admin user');
+          return false;
+        }
+      }
+
+      // Remove the user
+      this.users.splice(userIndex, 1);
+      
+      // Also remove associated team profile if exists
+      const teamIndex = this.teams.findIndex(t => t.user_id === userId);
+      if (teamIndex !== -1) {
+        this.teams.splice(teamIndex, 1);
+      }
+
+      // Save changes
+      this.saveData();
+      return true;
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      return false;
+    }
+  }
+
   createUserAsAdmin(userData: { email: string; password: string; role: 'admin' | 'team' }): User | null {
     if (!this.isAdmin()) return null;
 

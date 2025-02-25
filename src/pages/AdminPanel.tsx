@@ -76,7 +76,22 @@ export function AdminPanel() {
             Create New User
           </h3>
           
-          <form onSubmit={handleCreateUser} className="space-y-4">
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            try {
+              const user = dataService.createUserAsAdmin(newUser);
+              if (user) {
+                toast.success('User created successfully');
+                setNewUser({ email: '', password: '', role: 'team' });
+                loadUsers();
+              } else {
+                toast.error('Failed to create user');
+              }
+            } catch (error) {
+              toast.error('Error creating user');
+              console.error('Error:', error);
+            }
+          }} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-400 mb-1">Email</label>
               <input
@@ -120,6 +135,8 @@ export function AdminPanel() {
           </form>
         </div>
 
+
+
         {/* User List */}
         <div>
           <h3 className="text-xl font-semibold mb-6 flex items-center gap-2">
@@ -137,9 +154,36 @@ export function AdminPanel() {
                   <p className="font-medium text-white">{user.email}</p>
                   <p className="text-sm text-gray-400">Role: {user.role}</p>
                 </div>
-                <span className="text-xs text-gray-500">
-                  Created: {new Date(user.created_at).toLocaleDateString()}
-                </span>
+                <div className="flex items-center gap-4">
+                  <span className="text-xs text-gray-500">
+                    Created: {new Date(user.created_at).toLocaleDateString()}
+                  </span>
+                  {user.email !== 'vivek.aryanvbw@gmail.com' && (
+                    <button
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete ${user.email}?`)) {
+                          const success = dataService.deleteUser(user.id);
+                          if (success) {
+                            toast.success('User deleted successfully');
+                            loadUsers();
+                          } else {
+                            toast.error('Failed to delete user');
+                          }
+                        }
+                      }}
+                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded-lg transition-colors duration-200"
+                      title="Delete user"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M3 6h18"/>
+                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                        <line x1="10" y1="11" x2="10" y2="17"/>
+                        <line x1="14" y1="11" x2="14" y2="17"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
